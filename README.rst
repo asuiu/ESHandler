@@ -2,7 +2,7 @@
 eslogging
 ===============
 
-|  |license| |versions| |status| |downloads|
+|  |license| |build| |versions| |status| |downloads|
 
 
 
@@ -240,3 +240,6 @@ Feel free to use this as is or even better, feel free to fork and send your pull
 .. |license| image:: https://img.shields.io/pypi/l/eslogging.svg
     :target: https://pypi.org/project/eslogging/
     :alt: License
+.. |build| image:: https://api.travis-ci.org/asuiu/eslogging.svg?branch=master
+    :target: https://travis-ci.com/github/asuiu/eslogging
+    :alt: Build
