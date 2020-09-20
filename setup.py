@@ -13,7 +13,7 @@ VERSION = '1.0.1'
 basedir = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(basedir, 'README.md'), encoding='utf-8') as f:
+with open(path.join(basedir, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 install_requires = ['elasticsearch>=5.4.0;python_version>="3"',
@@ -32,6 +32,7 @@ parameters = dict(
 
     description='Elasticsearch Log handler for the logging library',
     long_description=long_description,
+    long_description_content_type="text/x-rst",
 
     # The project's main homepage.
     url='https://github.com/asuiu/eslogging',
