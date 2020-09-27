@@ -289,6 +289,16 @@ class ESHandler(logging.Handler):
 
         raise ValueError("Authentication method not supported")
 
+    def create_index_with_mapping(self, mapping: Dict[str, Any]) -> None:
+        """Create an index with specified mapping if there is no other index with specified name."""
+        client = self._get_es_client()
+        # If index already exists there will be no change.
+        client.indices.create(
+            index=self.es_index_name,
+            body=mapping,
+            ignore=400  # ignore 400 already exists code
+        )
+
     def test_es_source(self):
         """ Returns True if the handler can ping the Elasticsearch servers
 
