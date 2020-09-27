@@ -291,9 +291,9 @@ class ESHandler(logging.Handler):
 
     def create_index_with_mapping(self, mapping: Dict[str, Any]) -> None:
         """Create an index with specified mapping if there is no other index with specified name."""
-        self._client = self._get_es_client()
+        client = self._get_es_client()
         # If index already exists there will be no change.
-        self._client.indices.create(
+        client.indices.create(
             index=self.es_index_name,
             body=mapping,
             ignore=400  # ignore 400 already exists code
