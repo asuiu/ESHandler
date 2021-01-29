@@ -1,5 +1,6 @@
 import datetime
 import logging
+import platform
 import re
 import socket
 import sys
@@ -218,8 +219,15 @@ class ESHandler(logging.Handler):
             self.es_additional_fields = {}
         else:
             self.es_additional_fields = es_additional_fields.copy()
-        self.es_additional_fields.update({'host': socket.gethostname(),
-                                          'host_ip': socket.gethostbyname(socket.gethostname())})
+
+        host = socket.gethostname()
+        if platform.system() != 'Darwin':
+            host_ip = socket.gethostbyname(host)
+        else:
+            host_ip = '127.0.0.1'
+        self.es_additional_fields.update({'host': host,
+                                          'host_ip': host_ip})
+
         self.raise_on_indexing_exceptions = raise_on_indexing_exceptions
         self.default_timestamp_field_name = default_timestamp_field_name
         self._timed_flush = timed_flush
