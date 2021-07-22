@@ -15,7 +15,7 @@ Installation
 ============
 Install using pip::
 
-    pip install CMRESHandler
+    pip install eslogging
 
 
 Requirements Python 3
