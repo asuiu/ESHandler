@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 import platform
 import re
@@ -137,31 +138,31 @@ class ESHandler(logging.Handler):
 
     _INDEX_FREQUENCY_FUNCION_DICT = {
         IndexNameFrequency.NO_FREQ: _get_unchanged_index_name,
-        IndexNameFrequency.DAILY: _get_daily_index_name,
-        IndexNameFrequency.WEEKLY: _get_weekly_index_name,
+        IndexNameFrequency.DAILY:   _get_daily_index_name,
+        IndexNameFrequency.WEEKLY:  _get_weekly_index_name,
         IndexNameFrequency.MONTHLY: _get_monthly_index_name,
-        IndexNameFrequency.YEARLY: _get_yearly_index_name
+        IndexNameFrequency.YEARLY:  _get_yearly_index_name
     }
 
     def __init__(self,
-                 hosts: Iterable[Dict[str, Any]] = __DEFAULT_ELASTICSEARCH_HOST,
-                 auth_details=(__DEFAULT_AUTH_USER, __DEFAULT_AUTH_PASSWD),
-                 aws_access_key: str = __DEFAULT_AWS_ACCESS_KEY,
-                 aws_secret_key: str = __DEFAULT_AWS_SECRET_KEY,
-                 aws_region: str = __DEFAULT_AWS_REGION,
-                 auth_type: AuthType = __DEFAULT_AUTH_TYPE,
-                 use_ssl: bool = __DEFAULT_USE_SSL,
-                 verify_ssl: bool = __DEFAULT_VERIFY_SSL,
-                 buffer_size: int = __DEFAULT_BUFFER_SIZE,
-                 flush_frequency_in_sec: int = __DEFAULT_FLUSH_FREQ_INSEC,
-                 es_index_name: str = __DEFAULT_ES_INDEX_NAME,
-                 index_name_frequency: IndexNameFrequency = __DEFAULT_INDEX_FREQUENCY,
-                 es_doc_type: str = __DEFAULT_ES_DOC_TYPE,
-                 es_additional_fields: Optional[Dict] = None,
-                 raise_on_indexing_exceptions: bool = __DEFAULT_RAISE_ON_EXCEPTION,
-                 default_timestamp_field_name: str = __DEFAULT_TIMESTAMP_FIELD_NAME,
-                 timed_flush: bool = False,
-                 error_stream: TextIO = sys.stderr):
+        hosts: Iterable[Dict[str, Any]] = __DEFAULT_ELASTICSEARCH_HOST,
+        auth_details=(__DEFAULT_AUTH_USER, __DEFAULT_AUTH_PASSWD),
+        aws_access_key: str = __DEFAULT_AWS_ACCESS_KEY,
+        aws_secret_key: str = __DEFAULT_AWS_SECRET_KEY,
+        aws_region: str = __DEFAULT_AWS_REGION,
+        auth_type: AuthType = __DEFAULT_AUTH_TYPE,
+        use_ssl: bool = __DEFAULT_USE_SSL,
+        verify_ssl: bool = __DEFAULT_VERIFY_SSL,
+        buffer_size: int = __DEFAULT_BUFFER_SIZE,
+        flush_frequency_in_sec: int = __DEFAULT_FLUSH_FREQ_INSEC,
+        es_index_name: str = __DEFAULT_ES_INDEX_NAME,
+        index_name_frequency: IndexNameFrequency = __DEFAULT_INDEX_FREQUENCY,
+        es_doc_type: str = __DEFAULT_ES_DOC_TYPE,
+        es_additional_fields: Optional[Dict] = None,
+        raise_on_indexing_exceptions: bool = __DEFAULT_RAISE_ON_EXCEPTION,
+        default_timestamp_field_name: str = __DEFAULT_TIMESTAMP_FIELD_NAME,
+        timed_flush: bool = False,
+        error_stream: TextIO = sys.stderr):
         """ Handler constructor
 
         :param hosts: The list of hosts that elasticsearch clients will connect. The list can be provided
@@ -221,17 +222,17 @@ class ESHandler(logging.Handler):
             self.es_additional_fields = es_additional_fields.copy()
 
         host = socket.gethostname()
-        if platform.system() != 'Darwin':
+        if platform.system()!='Darwin':
             try:
                 host_ip = socket.gethostbyname(host)
             except Exception as err:
-                if err.errno == 8:
+                if err.errno==8:
                     host_ip = '127.0.0.1'
                 else:
                     raise err
         else:
             host_ip = '127.0.0.1'
-        self.es_additional_fields.update({'host': host,
+        self.es_additional_fields.update({'host':    host,
                                           'host_ip': host_ip})
 
         self.raise_on_indexing_exceptions = raise_on_indexing_exceptions
@@ -256,37 +257,37 @@ class ESHandler(logging.Handler):
             self._timer.start()
 
     def _get_es_client(self) -> Elasticsearch:
-        if self.auth_type == ESHandler.AuthType.NO_AUTH:
+        if self.auth_type==ESHandler.AuthType.NO_AUTH:
             if self._client is None:
                 self._client = Elasticsearch(hosts=self.hosts,
-                                             use_ssl=self.use_ssl,
-                                             verify_certs=self.verify_certs,
-                                             connection_class=RequestsHttpConnection,
-                                             serializer=self.serializer)
+                    use_ssl=self.use_ssl,
+                    verify_certs=self.verify_certs,
+                    connection_class=RequestsHttpConnection,
+                    serializer=self.serializer)
             return self._client
 
-        if self.auth_type == ESHandler.AuthType.BASIC_AUTH:
+        if self.auth_type==ESHandler.AuthType.BASIC_AUTH:
             if self._client is None:
                 return Elasticsearch(hosts=self.hosts,
-                                     http_auth=self.auth_details,
-                                     use_ssl=self.use_ssl,
-                                     verify_certs=self.verify_certs,
-                                     connection_class=RequestsHttpConnection,
-                                     serializer=self.serializer)
+                    http_auth=self.auth_details,
+                    use_ssl=self.use_ssl,
+                    verify_certs=self.verify_certs,
+                    connection_class=RequestsHttpConnection,
+                    serializer=self.serializer)
             return self._client
 
-        if self.auth_type == ESHandler.AuthType.KERBEROS_AUTH:
+        if self.auth_type==ESHandler.AuthType.KERBEROS_AUTH:
             if not KERBEROS_SUPPORTED:
                 raise EnvironmentError("Kerberos module not available. Please install \"requests-kerberos\"")
             # For kerberos we return a new client each time to make sure the tokens are up to date
             return Elasticsearch(hosts=self.hosts,
-                                 use_ssl=self.use_ssl,
-                                 verify_certs=self.verify_certs,
-                                 connection_class=RequestsHttpConnection,
-                                 http_auth=HTTPKerberosAuth(mutual_authentication=DISABLED),
-                                 serializer=self.serializer)
+                use_ssl=self.use_ssl,
+                verify_certs=self.verify_certs,
+                connection_class=RequestsHttpConnection,
+                http_auth=HTTPKerberosAuth(mutual_authentication=DISABLED),
+                serializer=self.serializer)
 
-        if self.auth_type == ESHandler.AuthType.AWS_SIGNED_AUTH:
+        if self.auth_type==ESHandler.AuthType.AWS_SIGNED_AUTH:
             if not AWS4AUTH_SUPPORTED:
                 raise EnvironmentError("AWS4Auth not available. Please install \"requests-aws4auth\"")
             if self._client is None:
@@ -342,8 +343,8 @@ class ESHandler(logging.Handler):
                     logs_buffer = self._buffer
                 actions = (
                     {
-                        '_index': self._index_name_func.__func__(self.es_index_name),
-                        '_type': self.es_doc_type,
+                        '_index':  self._index_name_func.__func__(self.es_index_name),
+                        '_type':   self.es_doc_type,
                         '_source': log_record
                     }
                     for log_record in logs_buffer
@@ -380,7 +381,7 @@ class ESHandler(logging.Handler):
         rec = self.es_additional_fields.copy()
         for key, value in record.__dict__.items():
             if key not in ESHandler.__LOGGING_FILTER_FIELDS:
-                if key == "args":
+                if key=="args":
                     value = tuple(str(arg) for arg in value)
                 rec[key] = "" if value is None else value
         rec[self.default_timestamp_field_name] = self._get_es_datetime_str(record.created)
@@ -388,3 +389,33 @@ class ESHandler(logging.Handler):
             self._buffer.append(rec)
 
         self._try_flush()
+
+
+class ESHandlerIgnoreESLogs(ESHandler):
+    """
+    This override is needed because elasticsearch.bulk function calls logging.info in its http_requests module,
+    and creates an infinite loop of logging.
+    ToDo: add unittests
+    """
+
+    def _emit(self, record: logging.LogRecord):
+        rec = self.es_additional_fields.copy()
+        message = record.getMessage()
+        rec["msg"] = message
+        log_keys = ["levelname", "pathname", "lineno", "funcName", "threadName", "processName", "process"]
+        for key in log_keys:
+            v = getattr(record, key, None)
+            if v is not None:
+                rec[key] = str(v)
+        rec[self.default_timestamp_field_name] = self._get_es_datetime_str(record.created)
+        with self._buffer_lock:
+            self._buffer.append(rec)
+
+        self._try_flush()
+
+    def emit(self, record: logging.LogRecord):
+        if isinstance(record.msg, (dict, list, tuple)):
+            record.msg = json.dumps(record.msg)
+        elif not isinstance(record.msg, str):
+            record.msg = str(record.msg)
+        self._emit(record)

@@ -23,13 +23,13 @@ class ESSerializerTestCase(unittest.TestCase):
         """Test the classic log serialization"""
         serializer = ESSerializer()
         record = self.log.makeRecord(name=self.log.name,
-                                     level=logging.INFO,
-                                     fn=self.__class__.__name__,
-                                     lno=58, msg="dump_classic_log",
-                                     args=None,
-                                     exc_info=False,
-                                     func=None,
-                                     extra=None)
+            level=logging.INFO,
+            fn=self.__class__.__name__,
+            lno=58, msg="dump_classic_log",
+            args=None,
+            exc_info=False,
+            func=None,
+            extra=None)
         self.formatter.format(record)
         for value in record.__dict__.values():
             try:
@@ -43,13 +43,13 @@ class ESSerializerTestCase(unittest.TestCase):
             bad_idea = 1 / 0
         except ZeroDivisionError:
             record = self.log.makeRecord(name=self.log.name,
-                                         level=logging.ERROR,
-                                         fn=self.__class__.__name__,
-                                         lno=58, msg="dump_exception_log",
-                                         args=None,
-                                         exc_info=sys.exc_info(),
-                                         func=None,
-                                         extra=None)
+                level=logging.ERROR,
+                fn=self.__class__.__name__,
+                lno=58, msg="dump_exception_log",
+                args=None,
+                exc_info=sys.exc_info(),
+                func=None,
+                extra=None)
         self.formatter.format(record)
         for value in record.__dict__.values():
             try:
@@ -61,14 +61,14 @@ class ESSerializerTestCase(unittest.TestCase):
         """ Test the log serialization with arguments and extras complex parameters"""
         serializer = ESSerializer()
         record = self.log.makeRecord(name=self.log.name,
-                                     level=logging.ERROR,
-                                     fn=self.__class__.__name__,
-                                     lno=58, msg="dump_%s_log",
-                                     args="args",
-                                     exc_info=False,
-                                     func=None,
-                                     extra={'complexvalue1': datetime.date.today(),
-                                            'complexvalue2': decimal.Decimal('3.0')})
+            level=logging.ERROR,
+            fn=self.__class__.__name__,
+            lno=58, msg="dump_%s_log",
+            args="args",
+            exc_info=False,
+            func=None,
+            extra={'complexvalue1': datetime.date.today(),
+                   'complexvalue2': decimal.Decimal('3.0')})
         self.formatter.format(record)
         for value in record.__dict__.values():
             try:
@@ -77,5 +77,5 @@ class ESSerializerTestCase(unittest.TestCase):
                 self.fail("Serializer raised a TypeError exception")
 
 
-if __name__ == '__main__':
+if __name__=='__main__':
     unittest.main()
