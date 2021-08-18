@@ -162,7 +162,8 @@ class ESHandler(logging.Handler):
         raise_on_indexing_exceptions: bool = __DEFAULT_RAISE_ON_EXCEPTION,
         default_timestamp_field_name: str = __DEFAULT_TIMESTAMP_FIELD_NAME,
         timed_flush: bool = False,
-        error_stream: TextIO = sys.stderr):
+        error_stream: TextIO = sys.stderr,
+        **kwargs,):
         """ Handler constructor
 
         :param hosts: The list of hosts that elasticsearch clients will connect. The list can be provided
@@ -198,6 +199,12 @@ class ESHandler(logging.Handler):
                     caused when
         :param timed_flush: A boolean, will perform flushing on an independent thread every flush_frequency_in_sec secs
                             regardless if the buffer size is full or not
+
+        :param kwargs: any additional arguments will be passed on to the
+            :class:`~elasticsearch.Elasticsearch` class and, subsequently, to the
+            :class:`~elasticsearch.Transport` class and, subsequently, to the
+            :class:`~elasticsearch.Connection` instances.
+
         :return: A ready to be used ESHandler.
         """
         logging.Handler.__init__(self)
@@ -215,6 +222,7 @@ class ESHandler(logging.Handler):
         self.es_index_name = es_index_name
         self.index_name_frequency = index_name_frequency
         self.es_doc_type = es_doc_type
+        self.kwargs = kwargs
 
         if es_additional_fields is None:
             self.es_additional_fields = {}
@@ -263,7 +271,8 @@ class ESHandler(logging.Handler):
                     use_ssl=self.use_ssl,
                     verify_certs=self.verify_certs,
                     connection_class=RequestsHttpConnection,
-                    serializer=self.serializer)
+                    serializer=self.serializer,
+                    **self.kwargs)
             return self._client
 
         if self.auth_type==ESHandler.AuthType.BASIC_AUTH:
@@ -273,7 +282,9 @@ class ESHandler(logging.Handler):
                     use_ssl=self.use_ssl,
                     verify_certs=self.verify_certs,
                     connection_class=RequestsHttpConnection,
-                    serializer=self.serializer)
+                    serializer=self.serializer,
+                    **self.kwargs
+                )
             return self._client
 
         if self.auth_type==ESHandler.AuthType.KERBEROS_AUTH:
@@ -285,7 +296,8 @@ class ESHandler(logging.Handler):
                 verify_certs=self.verify_certs,
                 connection_class=RequestsHttpConnection,
                 http_auth=HTTPKerberosAuth(mutual_authentication=DISABLED),
-                serializer=self.serializer)
+                serializer=self.serializer,
+                **self.kwargs)
 
         if self.auth_type==ESHandler.AuthType.AWS_SIGNED_AUTH:
             if not AWS4AUTH_SUPPORTED:
@@ -298,7 +310,8 @@ class ESHandler(logging.Handler):
                     use_ssl=self.use_ssl,
                     verify_certs=True,
                     connection_class=RequestsHttpConnection,
-                    serializer=self.serializer
+                    serializer=self.serializer,
+                    **self.kwargs
                 )
             return self._client
 

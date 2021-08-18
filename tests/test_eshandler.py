@@ -7,6 +7,8 @@ import os
 import sys
 import time
 import unittest
+from ssl import SSLContext
+from unittest.mock import MagicMock, patch
 
 from eslogging.handlers import ESHandler, ESHandlerIgnoreESLogs
 
@@ -175,6 +177,16 @@ class ESHandlerTestCase(unittest.TestCase):
             ESHandler._get_yearly_index_name(index_name)
         )
 
+    def test_get_es_client_with_kwargs(self):
+        ssl_context = MagicMock(spec=SSLContext)
+        with patch('eslogging.handlers.Elasticsearch') as es_mock:
+            handler = ESHandler(ssl_context=ssl_context, unknown_arg="unknown-value")
+            es_client = handler._get_es_client()
+            args, kwargs = es_mock.call_args_list[-1]
+            self.assertDictContainsSubset(dict(ssl_context=ssl_context, unknown_arg="unknown-value"), kwargs, )
+            self.assertEqual(es_mock.call_count, 1)
+
+
 class ESHandlerIgnoreESLogsTestCase(unittest.TestCase):
     DEFAULT_ES_SERVER = 'localhost'
     DEFAULT_ES_PORT = 9200
@@ -338,6 +350,7 @@ class ESHandlerIgnoreESLogsTestCase(unittest.TestCase):
             handler._index_name_func.__func__(index_name),
             ESHandlerIgnoreESLogs._get_yearly_index_name(index_name)
         )
+
 
 if __name__=='__main__':
     unittest.main()
