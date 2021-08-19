@@ -71,8 +71,6 @@ class ESHandler(logging.Handler):
     __DEFAULT_AWS_ACCESS_KEY = ''
     __DEFAULT_AWS_SECRET_KEY = ''
     __DEFAULT_AWS_REGION = ''
-    __DEFAULT_USE_SSL = False
-    __DEFAULT_VERIFY_SSL = True
     __DEFAULT_AUTH_TYPE = AuthType.NO_AUTH
     __DEFAULT_INDEX_FREQUENCY = IndexNameFrequency.DAILY
     __DEFAULT_BUFFER_SIZE = 1000
@@ -151,8 +149,6 @@ class ESHandler(logging.Handler):
         aws_secret_key: str = __DEFAULT_AWS_SECRET_KEY,
         aws_region: str = __DEFAULT_AWS_REGION,
         auth_type: AuthType = __DEFAULT_AUTH_TYPE,
-        use_ssl: bool = __DEFAULT_USE_SSL,
-        verify_ssl: bool = __DEFAULT_VERIFY_SSL,
         buffer_size: int = __DEFAULT_BUFFER_SIZE,
         flush_frequency_in_sec: int = __DEFAULT_FLUSH_FREQ_INSEC,
         es_index_name: str = __DEFAULT_ES_INDEX_NAME,
@@ -215,8 +211,6 @@ class ESHandler(logging.Handler):
         self.aws_secret_key = aws_secret_key
         self.aws_region = aws_region
         self.auth_type = auth_type
-        self.use_ssl = use_ssl
-        self.verify_certs = verify_ssl
         self.buffer_size = buffer_size
         self.flush_frequency_in_sec = flush_frequency_in_sec
         self.es_index_name = es_index_name
@@ -268,9 +262,6 @@ class ESHandler(logging.Handler):
         if self.auth_type==ESHandler.AuthType.NO_AUTH:
             if self._client is None:
                 self._client = Elasticsearch(hosts=self.hosts,
-                    use_ssl=self.use_ssl,
-                    verify_certs=self.verify_certs,
-                    connection_class=RequestsHttpConnection,
                     serializer=self.serializer,
                     **self.kwargs)
             return self._client
@@ -279,9 +270,6 @@ class ESHandler(logging.Handler):
             if self._client is None:
                 return Elasticsearch(hosts=self.hosts,
                     http_auth=self.auth_details,
-                    use_ssl=self.use_ssl,
-                    verify_certs=self.verify_certs,
-                    connection_class=RequestsHttpConnection,
                     serializer=self.serializer,
                     **self.kwargs
                 )
@@ -292,8 +280,6 @@ class ESHandler(logging.Handler):
                 raise EnvironmentError("Kerberos module not available. Please install \"requests-kerberos\"")
             # For kerberos we return a new client each time to make sure the tokens are up to date
             return Elasticsearch(hosts=self.hosts,
-                use_ssl=self.use_ssl,
-                verify_certs=self.verify_certs,
                 connection_class=RequestsHttpConnection,
                 http_auth=HTTPKerberosAuth(mutual_authentication=DISABLED),
                 serializer=self.serializer,
@@ -307,7 +293,6 @@ class ESHandler(logging.Handler):
                 self._client = Elasticsearch(
                     hosts=self.hosts,
                     http_auth=awsauth,
-                    use_ssl=self.use_ssl,
                     verify_certs=True,
                     connection_class=RequestsHttpConnection,
                     serializer=self.serializer,
