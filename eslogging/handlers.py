@@ -7,11 +7,10 @@ import socket
 import sys
 import traceback
 from enum import Enum
-from threading import Timer, Lock
-from typing import TextIO, Dict, Any, Iterable, Optional
+from threading import Lock, Timer
+from typing import Any, Dict, Iterable, Optional, TextIO
 
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-from elasticsearch import helpers as eshelpers
+from elasticsearch import Elasticsearch, RequestsHttpConnection, helpers as eshelpers
 
 try:
     from requests_kerberos import HTTPKerberosAuth, DISABLED
@@ -136,30 +135,30 @@ class ESHandler(logging.Handler):
 
     _INDEX_FREQUENCY_FUNCION_DICT = {
         IndexNameFrequency.NO_FREQ: _get_unchanged_index_name,
-        IndexNameFrequency.DAILY:   _get_daily_index_name,
-        IndexNameFrequency.WEEKLY:  _get_weekly_index_name,
+        IndexNameFrequency.DAILY: _get_daily_index_name,
+        IndexNameFrequency.WEEKLY: _get_weekly_index_name,
         IndexNameFrequency.MONTHLY: _get_monthly_index_name,
-        IndexNameFrequency.YEARLY:  _get_yearly_index_name
+        IndexNameFrequency.YEARLY: _get_yearly_index_name
     }
 
     def __init__(self,
-        hosts: Iterable[Dict[str, Any]] = __DEFAULT_ELASTICSEARCH_HOST,
-        auth_details=(__DEFAULT_AUTH_USER, __DEFAULT_AUTH_PASSWD),
-        aws_access_key: str = __DEFAULT_AWS_ACCESS_KEY,
-        aws_secret_key: str = __DEFAULT_AWS_SECRET_KEY,
-        aws_region: str = __DEFAULT_AWS_REGION,
-        auth_type: AuthType = __DEFAULT_AUTH_TYPE,
-        buffer_size: int = __DEFAULT_BUFFER_SIZE,
-        flush_frequency_in_sec: int = __DEFAULT_FLUSH_FREQ_INSEC,
-        es_index_name: str = __DEFAULT_ES_INDEX_NAME,
-        index_name_frequency: IndexNameFrequency = __DEFAULT_INDEX_FREQUENCY,
-        es_doc_type: str = __DEFAULT_ES_DOC_TYPE,
-        es_additional_fields: Optional[Dict] = None,
-        raise_on_indexing_exceptions: bool = __DEFAULT_RAISE_ON_EXCEPTION,
-        default_timestamp_field_name: str = __DEFAULT_TIMESTAMP_FIELD_NAME,
-        timed_flush: bool = False,
-        error_stream: TextIO = sys.stderr,
-        **kwargs,):
+                 hosts: Iterable[Dict[str, Any]] = __DEFAULT_ELASTICSEARCH_HOST,
+                 auth_details=(__DEFAULT_AUTH_USER, __DEFAULT_AUTH_PASSWD),
+                 aws_access_key: str = __DEFAULT_AWS_ACCESS_KEY,
+                 aws_secret_key: str = __DEFAULT_AWS_SECRET_KEY,
+                 aws_region: str = __DEFAULT_AWS_REGION,
+                 auth_type: AuthType = __DEFAULT_AUTH_TYPE,
+                 buffer_size: int = __DEFAULT_BUFFER_SIZE,
+                 flush_frequency_in_sec: int = __DEFAULT_FLUSH_FREQ_INSEC,
+                 es_index_name: str = __DEFAULT_ES_INDEX_NAME,
+                 index_name_frequency: IndexNameFrequency = __DEFAULT_INDEX_FREQUENCY,
+                 es_doc_type: str = __DEFAULT_ES_DOC_TYPE,
+                 es_additional_fields: Optional[Dict] = None,
+                 raise_on_indexing_exceptions: bool = __DEFAULT_RAISE_ON_EXCEPTION,
+                 default_timestamp_field_name: str = __DEFAULT_TIMESTAMP_FIELD_NAME,
+                 timed_flush: bool = False,
+                 error_stream: TextIO = sys.stderr,
+                 **kwargs, ):
         """ Handler constructor
 
         :param hosts: The list of hosts that elasticsearch clients will connect. The list can be provided
@@ -224,17 +223,17 @@ class ESHandler(logging.Handler):
             self.es_additional_fields = es_additional_fields.copy()
 
         host = socket.gethostname()
-        if platform.system()!='Darwin':
+        if platform.system() != 'Darwin':
             try:
                 host_ip = socket.gethostbyname(host)
             except Exception as err:
-                if err.errno==8:
+                if err.errno == 8:
                     host_ip = '127.0.0.1'
                 else:
                     raise err
         else:
             host_ip = '127.0.0.1'
-        self.es_additional_fields.update({'host':    host,
+        self.es_additional_fields.update({'host': host,
                                           'host_ip': host_ip})
 
         self.raise_on_indexing_exceptions = raise_on_indexing_exceptions
@@ -259,36 +258,31 @@ class ESHandler(logging.Handler):
             self._timer.start()
 
     def _get_es_client(self) -> Elasticsearch:
-        if self.auth_type==ESHandler.AuthType.NO_AUTH:
-            if self._client is None:
+        if self._client is None:
+            if self.auth_type == ESHandler.AuthType.NO_AUTH:
                 self._client = Elasticsearch(hosts=self.hosts,
-                    serializer=self.serializer,
-                    **self.kwargs)
-            return self._client
+                                             serializer=self.serializer,
+                                             **self.kwargs)
+            elif self.auth_type == ESHandler.AuthType.BASIC_AUTH:
+                self._client = Elasticsearch(hosts=self.hosts,
+                                             http_auth=self.auth_details,
+                                             serializer=self.serializer,
+                                             **self.kwargs
+                                             )
 
-        if self.auth_type==ESHandler.AuthType.BASIC_AUTH:
-            if self._client is None:
-                return Elasticsearch(hosts=self.hosts,
-                    http_auth=self.auth_details,
-                    serializer=self.serializer,
-                    **self.kwargs
-                )
-            return self._client
+            elif self.auth_type == ESHandler.AuthType.KERBEROS_AUTH:
+                if not KERBEROS_SUPPORTED:
+                    raise EnvironmentError("Kerberos module not available. Please install \"requests-kerberos\"")
+                # For kerberos we return a new client each time to make sure the tokens are up to date
+                self._client = Elasticsearch(hosts=self.hosts,
+                                             connection_class=RequestsHttpConnection,
+                                             http_auth=HTTPKerberosAuth(mutual_authentication=DISABLED),
+                                             serializer=self.serializer,
+                                             **self.kwargs)
 
-        if self.auth_type==ESHandler.AuthType.KERBEROS_AUTH:
-            if not KERBEROS_SUPPORTED:
-                raise EnvironmentError("Kerberos module not available. Please install \"requests-kerberos\"")
-            # For kerberos we return a new client each time to make sure the tokens are up to date
-            return Elasticsearch(hosts=self.hosts,
-                connection_class=RequestsHttpConnection,
-                http_auth=HTTPKerberosAuth(mutual_authentication=DISABLED),
-                serializer=self.serializer,
-                **self.kwargs)
-
-        if self.auth_type==ESHandler.AuthType.AWS_SIGNED_AUTH:
-            if not AWS4AUTH_SUPPORTED:
-                raise EnvironmentError("AWS4Auth not available. Please install \"requests-aws4auth\"")
-            if self._client is None:
+            elif self.auth_type == ESHandler.AuthType.AWS_SIGNED_AUTH:
+                if not AWS4AUTH_SUPPORTED:
+                    raise EnvironmentError("AWS4Auth not available. Please install \"requests-aws4auth\"")
                 awsauth = AWS4Auth(self.aws_access_key, self.aws_secret_key, self.aws_region, 'es')
                 self._client = Elasticsearch(
                     hosts=self.hosts,
@@ -298,9 +292,10 @@ class ESHandler(logging.Handler):
                     serializer=self.serializer,
                     **self.kwargs
                 )
-            return self._client
+            else:
+                raise ValueError("Authentication method not supported")
 
-        raise ValueError("Authentication method not supported")
+        return self._client
 
     def create_index_with_mapping(self, mapping: Dict[str, Any]) -> None:
         """Create an index with specified mapping if there is no other index with specified name."""
@@ -339,20 +334,20 @@ class ESHandler(logging.Handler):
             try:
                 with self._buffer_lock:
                     logs_buffer = self._buffer
-                actions = (
-                    {
-                        '_index':  self._index_name_func.__func__(self.es_index_name),
-                        '_type':   self.es_doc_type,
-                        '_source': log_record
-                    }
-                    for log_record in logs_buffer
-                )
-                eshelpers.bulk(
-                    client=self._get_es_client(),
-                    actions=actions,
-                    stats_only=True
-                )
-                self._buffer = []
+                    actions = (
+                        {
+                            '_index': self._index_name_func.__func__(self.es_index_name),
+                            '_type': self.es_doc_type,
+                            '_source': log_record
+                        }
+                        for log_record in logs_buffer
+                    )
+                    eshelpers.bulk(
+                        client=self._get_es_client(),
+                        actions=actions,
+                        stats_only=True
+                    )
+                    self._buffer = []
             except Exception as exception:
                 if self.raise_on_indexing_exceptions:
                     raise exception
@@ -379,7 +374,7 @@ class ESHandler(logging.Handler):
         rec = self.es_additional_fields.copy()
         for key, value in record.__dict__.items():
             if key not in ESHandler.__LOGGING_FILTER_FIELDS:
-                if key=="args":
+                if key == "args":
                     value = tuple(str(arg) for arg in value)
                 rec[key] = "" if value is None else value
         rec[self.default_timestamp_field_name] = self._get_es_datetime_str(record.created)
